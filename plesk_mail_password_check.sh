@@ -113,7 +113,7 @@ fn_check_password_global(){
 if [ -f "check_auth.txt" ]; then
 	while read -r line ; do
 		mailaddress="$(echo "${line}" | awk '{print $2}')"
-		mailpassword="$(echo "${line}" | awk '{print $5}')"
+		mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
 		fn_echo "Testing: ${mailaddress}"
 		fn_check_password_global
 	done <  <(cat check_auth.txt)
