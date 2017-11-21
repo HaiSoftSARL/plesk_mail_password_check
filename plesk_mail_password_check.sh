@@ -172,10 +172,14 @@ fi
 echo ""
 
 # Display unsecured mail addresses
-fn_logecho "Unsecured email addresses:"
-for ((index=0; index < ${#error[@]}; index++)); do
-	echo -en "${error[index]}\n"
-done
+if [ "${#error[@]}" == "0" ]; then
+	fn_logecho "Unsecured email addresses:"
+	for ((index=0; index < ${#error[@]}; index++)); do
+		echo -en "${error[index]}\n"
+	done
+else
+	fn_logecho "Congrats! All email addresses passwords are secured"
+fi
 
 for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
 	fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
