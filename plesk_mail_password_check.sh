@@ -41,14 +41,10 @@ else
 	exit 1
 fi
 
-# Add reason to test result
-fn_add_reason(){
-
-}
-
 # Analyzes result of the last test and takes action
 fn_last_test_result(){
         if [ "${test}" == "fail" ]; then
+		# Add reason to test result
 		# No reason yet
 		if [ -z "${reasons}" ]; then
 			reasons="${reason}"
