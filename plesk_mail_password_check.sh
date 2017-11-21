@@ -104,7 +104,7 @@ fi
 fn_check_password_simple(){
 if [ "${check_password_simple}" == "on" ]; then
 	mailname="$(echo "${mailaddress}" | awk -F "@" '{print $1}')"
-	easypasswordslist=( "azerty" "qwerty" "azerty123" "qwerty123" "baseball" "dragon" "football" "monkey" "letmein" "111111" "mustang" "access" "shadow" "master" "superman" "696969" "123123" "batman" "trustno1" "1234" "12345" "123456" "1234567" "12345678" "123456789" "2017" "cacao" "banane" "fraise" "framboise" "bepo" "admin" "password" "motdepasse" "pompidou" "macron" "chirac" "1789" "asterix" "obelix" "tintin" "hobbit" "freudon" "wordpress" "joomla" )
+	easypasswordslist=( "azerty" "qwerty" "hello" "salut" "azerty123" "qwerty123" "baseball" "dragon" "football" "monkey" "letmein" "111111" "mustang" "access" "shadow" "master" "superman" "696969" "123123" "batman" "trustno1" "1234" "12345" "123456" "1234567" "12345678" "123456789" "2017" "cacao" "banane" "fraise" "framboise" "bepo" "admin" "password" "motdepasse" "pompidou" "macron" "chirac" "1789" "asterix" "obelix" "tintin" "hobbit" "freudon" "wordpress" "joomla" )
 	if [[ "${easypasswordslist[@]}" =~ "${mailpassword}" ]]; then
 		test="fail"
 		reason="Password is too easy"
@@ -140,31 +140,41 @@ fn_check_password_global(){
 	fn_check_password_charset
 	if [ -n "${reasons}" ]; then
 		error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
+		unsecuredcount=$((unsecuredcount+1))
 	fi
 }
 
 # Actually check for bad passwords
+unsecuredcount=0
 if [ -f "check_auth.txt" ]; then
-	# Loop through all mail address
-	while read -r line ; do
-		# Get mail address and password into variables
-		mailaddress="$(echo "${line}" | awk '{print $2}')"
-		mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
-		fn_echo "Testing: ${mailaddress}"
-		fn_check_password_global
-	done <  <(cat check_auth.txt)
+        echo ""
+        fn_echo "Testing mail addresses..."
+        echo ""
+        totalmailaddresses=0
+        # Loop through all mail address
+        while read -r line ; do
+               	totalmailaddresses=$((totalmailaddresses+1))
+               	# Get mail address and password into variables
+               	mailaddress="$(echo "${line}" | awk '{print $2}')"
+               	mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
+                echo -en "\e[1A"
+               	echo -e "\r\e[0K ${totalmailaddresses} - ${mailaddress}"
+               	fn_check_password_global
+        done <  <(cat check_auth.txt)
 fi
+
 
 echo ""
 echo ""
 
 # Display unsecured mail addresses
 for ((index=0; index < ${#error[@]}; index++)); do
-	echo -en "\e[1A"
 	echo -en "${error[index]}\n"
 done
 
 if [ -f "check_auth.txt" ];then
 	rm -f check_auth.txt
 fi
+fn_logecho "Total addresses: ${totalmailaddresses}"
+fn_logecho "Unsecured addresses: ${unsecuredcount}" 
 fn_duration
