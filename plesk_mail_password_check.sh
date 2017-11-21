@@ -138,9 +138,9 @@ fn_check_password_global(){
 		error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
 		unsecuredcount=$((unsecuredcount+1))
 		# List domain as problematic
-		if [[ ! ${unsecureddomains[@]} =~ "${maildomain}" ]]; then
+		if [[ ! "${unsecureddomains[@]}" =~ "${maildomain}" ]]; then
 			unsecureddomains+=( "${maildomain}" )
-			unsecureddomainscount=$((unsecureddomains+1))
+			unsecureddomainscount=$((unsecureddomainscount+1))
 		fi
 	fi
 }
