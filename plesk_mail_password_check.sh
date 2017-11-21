@@ -13,7 +13,8 @@
 check_length="on" # Is the password long enough or not
 check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
-check_password_charset="off"
+check_password_simple="on" # Is the mail password too simple or not
+check_password_charset="off" # Are characters in use too simple or not
 
 # Strengh
 passwordlength="5"
@@ -70,7 +71,7 @@ fi
 
 # Check for passwords being self name, example@domain.tld has example as a password
 fn_check_password_selfname(){
-if [ "${check_password_selfname}" == "on" ];then
+if [ "${check_password_selfname}" == "on" ]; then
 	mailname="$(echo "${mailaddress}" | awk -F "@" '{print $1}')"
 	if [ "${mailname}" == "${mailpassword}" ]; then
 		test="fail"
@@ -99,6 +100,20 @@ if [ "${check_password_domain}" == "on" ]; then
 fi
 }
 
+# Check for too easy known passwords
+fn_check_password_simple(){
+if [ "${check_password_simple}" == "on" ]; then
+	mailname="$(echo "${mailaddress}" | awk -F "@" '{print $1}')"
+	easypasswordslist=( "azerty" "qwerty" "azerty123" "qwerty123" "baseball" "dragon" "football" "monkey" "letmein" "111111" "mustang" "access" "shadow" "master" "superman" "696969" "123123" "batman" "trustno1" "1234" "12345" "123456" "1234567" "12345678" "123456789" "2017" "cacao" "banane" "fraise" "framboise" "bepo" "admin" "password" "motdepasse" "pompidou" "macron" "chirac" "1789" "asterix" "obelix" "tintin" "hobbit" "freudon" "wordpress" "joomla" )
+	if [ "${easypasswordslist[@]}" ~= "${mailpassword}" ]; then
+		test="fail"
+		reason="Password is too easy"
+	else
+		test="pass"
+	fi
+	fn_last_test_result
+}
+
 # Check if charset is rich enough
 # NOT READY YET
 fn_check_password_charset(){
@@ -120,7 +135,11 @@ fn_check_password_global(){
 	fn_check_password_length
 	fn_check_password_selfname
 	fn_check_password_domain
+	fn_check_password_simple
 	fn_check_password_charset
+	if [ -n "${reasons}" ]; then
+		error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
+	fi
 }
 
 # Actually check for bad passwords
@@ -132,16 +151,15 @@ if [ -f "check_auth.txt" ]; then
 		mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
 		fn_echo "Testing: ${mailaddress}"
 		fn_check_password_global
-		if [ -n "${reasons}" ]; then
-			error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
-		fi
 	done <  <(cat check_auth.txt)
 fi
 
 echo ""
+echo ""
 
 # Display unsecured mail addresses
 for ((index=0; index < ${#error[@]}; index++)); do
+	echo -en "\e[1A"
 	echo -en "${error[index]}\n"
 done
 
