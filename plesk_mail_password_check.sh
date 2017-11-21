@@ -17,7 +17,7 @@ check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="off" # Are characters in use too simple or not
 
 # Strengh
-passwordlength="5"
+passwordlength="7"
 
 ##############
 ### Script ###
