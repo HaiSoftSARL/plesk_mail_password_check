@@ -13,10 +13,10 @@
 check_length="on" # Is the password long enough or not
 check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
-check_password_charset="on"
+check_password_charset="off"
 
 # Strengh
-passwordlength="4"
+passwordlength="5"
 
 ##############
 ### Script ###
@@ -32,19 +32,31 @@ if [ ! -f "ultimate-bash-api.sh" ]; then
 fi
 source ultimate-bash-api.sh
 
-# If Plesk is installed, then write all credentials into check_auth.txt
+# If Plesk is auth view is found, then write all credentials into check_auth.txt
 if [ -f "/usr/local/psa/admin/bin/mail_auth_view" ]; then
 	fn_logecho "Writing password list"
 	/usr/local/psa/admin/bin/mail_auth_view | grep "|" | tail -n +2 > check_auth.txt
 else
-	fn_logecho "Cannot find mail_auth_view from Plesk, skipping writing password list"
+	fn_logecho "[ERROR] Cannot find mail_auth_view from Plesk"
+	exit 1
 fi
+
+# Add reason to test result
+fn_add_reason(){
+
+}
 
 # Analyzes result of the last test and takes action
 fn_last_test_result(){
         if [ "${test}" == "fail" ]; then
-                error+=("[NOT SECURE] | ${mailaddress} | ${reason} | ${mailpassword}")
-       	fi
+		# No reason yet
+		if [ -z "${reasons}" ]; then
+			reasons="${reason}"
+		else
+		# Reasons already exist for the domain, add other ones
+			reasons="${reasons} ; ${reason}"
+		fi
+	fi
 }
 
 # Check for password length according to $passwordlength
@@ -90,38 +102,49 @@ if [ "${check_password_domain}" == "on" ]; then
 	fn_last_test_result
 fi
 }
+
+# Check if charset is rich enough
+# NOT READY YET
 fn_check_password_charset(){
-if [ "${check_password_charset}" ==on ]; then
+if [ "${check_password_charset}" == "on" ]; then
         if [ "${mailpassword}"  ]; then
                 test="fail"
                 reason="Password is domain name"
         else
             	test="pass"
         fi
+	fn_last_test_result
 fi
 }
 
 
 # Run all the checks
 fn_check_password_global(){
+	unset reasons
 	fn_check_password_length
 	fn_check_password_selfname
 	fn_check_password_domain
+	fn_check_password_charset
 }
 
-# Check for bad passwords
+# Actually check for bad passwords
 if [ -f "check_auth.txt" ]; then
+	# Loop through all mail address
 	while read -r line ; do
+		# Get mail address and password into variables
 		mailaddress="$(echo "${line}" | awk '{print $2}')"
 		mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
 		fn_echo "Testing: ${mailaddress}"
 		fn_check_password_global
+		if [ -n "${reasons}" ]; then
+			error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
+		fi
 	done <  <(cat check_auth.txt)
 fi
 
 echo ""
 
-# Display errors
+# Display unsecured mail addresses
 for ((index=0; index < ${#error[@]}; index++)); do
 	echo -en "${error[index]}\n"
 done
@@ -129,3 +152,4 @@ done
 if [ -f "check_auth.txt" ];then
 	rm -f check_auth.txt
 fi
+fn_duration
