@@ -105,13 +105,14 @@ fn_check_password_simple(){
 if [ "${check_password_simple}" == "on" ]; then
 	mailname="$(echo "${mailaddress}" | awk -F "@" '{print $1}')"
 	easypasswordslist=( "azerty" "qwerty" "azerty123" "qwerty123" "baseball" "dragon" "football" "monkey" "letmein" "111111" "mustang" "access" "shadow" "master" "superman" "696969" "123123" "batman" "trustno1" "1234" "12345" "123456" "1234567" "12345678" "123456789" "2017" "cacao" "banane" "fraise" "framboise" "bepo" "admin" "password" "motdepasse" "pompidou" "macron" "chirac" "1789" "asterix" "obelix" "tintin" "hobbit" "freudon" "wordpress" "joomla" )
-	if [ "${easypasswordslist[@]}" ~= "${mailpassword}" ]; then
+	if [ "${easypasswordslist[@]}" =~ "${mailpassword}" ]; then
 		test="fail"
 		reason="Password is too easy"
 	else
 		test="pass"
 	fi
 	fn_last_test_result
+fi
 }
 
 # Check if charset is rich enough
