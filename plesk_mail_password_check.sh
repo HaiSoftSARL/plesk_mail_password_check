@@ -15,6 +15,7 @@ check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
 check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="off" # Are characters in use too simple or not
+password_charset_severity="2" # How many character types are needed 1-4
 
 # Strengh
 passwordlength="7"
@@ -33,7 +34,7 @@ if [ ! -f "ultimate-bash-api.sh" ]; then
 fi
 source ultimate-bash-api.sh
 
-# If Plesk is auth view is found, then write all credentials into check_auth.txt
+# If Plesk auth view is found, then write all credentials into check_auth.txt
 if [ -f "/usr/local/psa/admin/bin/mail_auth_view" ]; then
 	fn_logecho "Writing password list"
 	/usr/local/psa/admin/bin/mail_auth_view | grep "|" | tail -n +2 > check_auth.txt
@@ -114,8 +115,25 @@ fi
 # Check if charset is rich enough
 # NOT READY YET
 fn_check_password_charset(){
+passcharcomplexity=0
 if [ "${check_password_charset}" == "on" ]; then
-        if [ "${mailpassword}"  ]; then
+	# Check for lowercase chars
+	if [[ "${mailpassword}" =~ [a-z] ]]; then
+		passcharcomplexity=$((passcharcomplexity+1))
+	fi
+	# Check for uppercase chars
+        if [[ "${mailpassword}" =~ [A-Z] ]]; then
+		passcharcomplexity=$((passcharcomplexity+1))
+	fi
+	# Check for digit chars
+        if [[ "${mailpassword}" =~ [0-9] ]]; then
+		passcharcomplexity=$((passcharcomplexity+1))
+	fi
+	# Check for signs
+        if [[ "${mailpassword}" = *[^[:alnum:]]* ]]; then
+		passcharcomplexity=$((passcharcomplexity+1))
+	fi
+	if [ "${passcharcomplexity} <= "${password_charset_severity}" ]; then
                 test="fail"
                 reason="Password is domain name"
         else
