@@ -17,8 +17,12 @@ check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="on" # Are characters in use too simple or not
 
 # Strengh
+global_risk_threshold="4" # Lower is stronger
 password_length="7" # How many characters minimum should the password be
 password_charset_required="2" # How many character types are needed 1-4
+
+# Output options
+displaydomains="off" # Wether to display unsecured domains or not
 
 ##############
 ### Script ###
@@ -70,22 +74,6 @@ else
 		exit 1
 	fi
 fi
-
-# Analyzes result of the last test and registers the reason
-fn_last_test_result(){
-        if [ "${test}" == "fail" ]; then
-		# Count risk total for the address according to severity
-		risk=$((risk+severity))
-		# Add reason to test result
-		# No reason yet
-		if [ -z "${reasons}" ]; then
-			reasons="Password is: ${reason}"
-		else
-		# Reasons already exist for the domain, add other ones
-			reasons="${reasons} ; ${reason}"
-		fi
-	fi
-}
 
 # Check for password length according to $password_length
 fn_check_password_length(){
@@ -177,6 +165,27 @@ if [ "${check_password_charset}" == "on" ]; then
 fi
 }
 
+# Analyzes result of the last test and registers the reason
+fn_last_test_result(){
+        if [ "${test}" == "fail" ]; then
+		# Count risk total for the address according to severity
+		risk=$((risk+severity))
+		# Register risk if threshold is reached
+		if [ "${risk}" -ge "${global_risk_threshold}" ]; then
+			# Add reason to test result
+			# No reason yet
+			if [ -z "${reasons}" ]; then
+				reasons="Password is: ${reason}"
+			else
+			# Reasons already exist for the domain, add other ones
+				reasons="${reasons} ; ${reason}"
+			fi
+		else
+			unset reasons
+		fi
+	fi
+}
+
 # Create a raw list of all addresses and passwords
 fn_list_passwords(){
 	# If Plesk auth view is found, then write all credentials into check_auth.txt
@@ -201,7 +210,7 @@ fn_all_checks(){
 	fn_check_password_charset
 	# If password is bad
 	if [ -n "${reasons}" ]; then
-		error+=("[NOT SECURE] | ${mailaddress} | Risk: ${risk} | ${mailpassword} | ${reasons}")
+		error+=( "${risk}" "${mailaddress}" "${mailpassword}" "${reasons}" )
 		unsecuredcount=$((unsecuredcount+1))
 		# List domain as problematic
 		if [[ ! "${unsecureddomains[@]}" =~ "${maildomain}" ]]; then
@@ -245,13 +254,20 @@ fn_display_results(){
 		fn_logecho "Congrats! All email addresses passwords are secured"
 	else
 		fn_logecho "Unsecured email addresses:"
-		for ((index=0; index < ${#error[@]}; index++)); do
-			echo -en "${error[index]}\n"
+		# error+=( "${risk}" "${mailaddress}" "${mailpassword}" "${reasons}" )
+		for ((index=0; index < ${#error[@]}; index+4)); do
+			risk="${error[index]}"
+			mailaddress="${error[index+]}"
+			mailpassword="${error[index+2]}"
+			reasons="${error[index+3]}"
+			echo -en "Risk: ${risk} | ${mailaddress} | ${mailpassword} | ${reasons}\n"
 		done
+		if [ "${displaydomains}" == "on" ]; then
 		fn_logecho "Unsecured domains:"
-		for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
-		fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
-	done
+			for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
+				fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
+			done
+		fi
 	fi
 
 	if [ -f "check_auth.txt" ];then
@@ -260,8 +276,8 @@ fn_display_results(){
 	fn_logecho "Total addresses: ${totalmailaddresses}"
 	fn_logecho "Unsecured addresses: ${unsecuredcount} from ${unsecureddomainscount} domains"
 }
-fn_duration
 
+# Run script according to command
 if [ "${command}" == "show" ]; then
 	fn_list_passwords
 	fn_run_checks
@@ -270,3 +286,5 @@ elif [ "${command}" == "warn" ];then
 	fn_logecho "Sorry, warn command is not really available yet."
 	exit 0
 fi
+
+fn_duration
