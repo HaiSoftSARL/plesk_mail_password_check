@@ -15,10 +15,10 @@ check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
 check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="off" # Are characters in use too simple or not
-password_charset_severity="2" # How many character types are needed 1-4
 
 # Strengh
-passwordlength="7"
+password_length="7" # How many characters minimum should the password be
+password_charset_required="2" # How many character types are needed 1-4
 
 ##############
 ### Script ###
@@ -57,12 +57,12 @@ fn_last_test_result(){
 	fi
 }
 
-# Check for password length according to $passwordlength
+# Check for password length according to $password_length
 fn_check_password_length(){
 if [ "${check_length}" == "on" ]; then
-	if [ "${#mailpassword}" -lt "${passwordlength}" ]; then
+	if [ "${#mailpassword}" -lt "${password_length}" ]; then
 		test="fail"
-		reason="Password length is ${#mailpassword} chars for ${passwordlength} required"
+		reason="Password length is ${#mailpassword} chars for ${password_length} required"
 	else
 		test="pass"
 	fi
@@ -113,10 +113,9 @@ fi
 }
 
 # Check if charset is rich enough
-# NOT READY YET
 fn_check_password_charset(){
-passcharcomplexity=0
 if [ "${check_password_charset}" == "on" ]; then
+	passcharcomplexity=0
 	# Check for lowercase chars
 	if [[ "${mailpassword}" =~ [a-z] ]]; then
 		passcharcomplexity=$((passcharcomplexity+1))
@@ -133,9 +132,9 @@ if [ "${check_password_charset}" == "on" ]; then
         if [[ "${mailpassword}" = *[^[:alnum:]]* ]]; then
 		passcharcomplexity=$((passcharcomplexity+1))
 	fi
-	if [ "${passcharcomplexity} <= "${password_charset_severity}" ]; then
+	if [ "${passcharcomplexity}" -lt "${password_charset_required}" ]; then
                 test="fail"
-                reason="Password is domain name"
+                reason="Password charset complexity is only ${passcharcomplexity}"
         else
             	test="pass"
         fi
@@ -152,6 +151,7 @@ fn_check_password_global(){
 	fn_check_password_domain
 	fn_check_password_simple
 	fn_check_password_charset
+	# If password is bad
 	if [ -n "${reasons}" ]; then
 		error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
 		unsecuredcount=$((unsecuredcount+1))
