@@ -171,17 +171,13 @@ fn_last_test_result(){
 		# Count risk total for the address according to severity
 		risk=$((risk+severity))
 		# Register risk if threshold is reached
-		if [ "${risk}" -ge "${global_risk_threshold}" ]; then
-			# Add reason to test result
-			# No reason yet
-			if [ -z "${reasons}" ]; then
-				reasons="Password is: ${reason}"
-			else
-			# Reasons already exist for the domain, add other ones
-				reasons="${reasons} ; ${reason}"
-			fi
+		# Add reason to test result
+		# No reason yet
+		if [ -z "${reasons}" ]; then
+			reasons="Password is: ${reason}"
 		else
-			unset reasons
+		# Reasons already exist for the domain, add other ones
+			reasons="${reasons} ; ${reason}"
 		fi
 	fi
 }
@@ -209,7 +205,7 @@ fn_all_checks(){
 	fn_check_password_simple
 	fn_check_password_charset
 	# If password is bad
-	if [ -n "${reasons}" ]; then
+	if [ "${risk}" -ge "${global_risk_threshold}" ]; then
 		error+=( "${risk}" "${mailaddress}" "${mailpassword}" "${reasons}" )
 		unsecuredcount=$((unsecuredcount+1))
 		# List domain as problematic
@@ -255,7 +251,7 @@ fn_display_results(){
 	else
 		fn_logecho "Unsecured email addresses:"
 		# error+=( "${risk}" "${mailaddress}" "${mailpassword}" "${reasons}" )
-		for ((index=0; index < ${#error[@]}; index+4)); do
+		for ((index=0; index < ${#error[@]}; index+=4)); do
 			risk="${error[index]}"
 			mailaddress="${error[index+1]}"
 			mailpassword="${error[index+2]}"
