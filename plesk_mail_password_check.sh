@@ -257,7 +257,7 @@ fn_display_results(){
 		# error+=( "${risk}" "${mailaddress}" "${mailpassword}" "${reasons}" )
 		for ((index=0; index < ${#error[@]}; index+4)); do
 			risk="${error[index]}"
-			mailaddress="${error[index+]}"
+			mailaddress="${error[index+1]}"
 			mailpassword="${error[index+2]}"
 			reasons="${error[index+3]}"
 			echo -en "Risk: ${risk} | ${mailaddress} | ${mailpassword} | ${reasons}\n"
