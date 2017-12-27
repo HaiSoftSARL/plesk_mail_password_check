@@ -49,7 +49,7 @@ fn_last_test_result(){
 		# Add reason to test result
 		# No reason yet
 		if [ -z "${reasons}" ]; then
-			reasons="${reason}"
+			reasons="Password is: ${reason}"
 		else
 		# Reasons already exist for the domain, add other ones
 			reasons="${reasons} ; ${reason}"
@@ -62,7 +62,7 @@ fn_check_password_length(){
 if [ "${check_length}" == "on" ]; then
 	if [ "${#mailpassword}" -lt "${password_length}" ]; then
 		test="fail"
-		reason="Password length is ${#mailpassword} chars for ${password_length} required"
+		reason="Pass is ${#mailpassword}/${password_length} chars"
 	else
 		test="pass"
 	fi
@@ -76,7 +76,7 @@ if [ "${check_password_selfname}" == "on" ]; then
 	mailname="$(echo "${mailaddress}" | awk -F "@" '{print $1}')"
 	if [ "${mailname}" == "${mailpassword}" ]; then
 		test="fail"
-		reason="Password is mail name"
+		reason="mail name"
 	else
 		test="pass"
 	fi
@@ -89,7 +89,7 @@ fn_check_password_domain(){
 if [ "${check_password_domain}" == "on" ]; then
         if [ "${mailpassword}" == "${maildomain}" ]||[ "${mailpassword}" == "${maildomainonly}" ]||[ "${mailpassword}" == "${maildomainext}" ]; then
                 test="fail"
-                reason="Password is domain name"
+                reason="domain"
         else
             	test="pass"
         fi
@@ -104,7 +104,7 @@ if [ "${check_password_simple}" == "on" ]; then
 	easypasswordslist=( "azerty" "qwerty" "hello" "salut" "azerty123" "qwertyuiop" "azertyuiop" "google" "haisoft" "yahoo" "facebook" "microsoft" "qwerty123" "soleil" "mirage" "baseball" "dragon" "football" "monkey" "letmein" "111111" "mustang" "access" "shadow" "master" "superman" "696969" "123123" "batman" "trustno1" "1234" "12345" "123456" "1234567" "12345678" "123456789" "2017" "cacao" "banane" "fraise" "framboise" "bepo" "admin" "password" "motdepasse" "pompidou" "macron" "chirac" "1789" "asterix" "obelix" "tintin" "hobbit" "freudon" "wordpress" "joomla" )
 	if [[ "${easypasswordslist[@]}" =~ "${mailpassword}" ]]; then
 		test="fail"
-		reason="Password is too easy"
+		reason="an easy pattern"
 	else
 		test="pass"
 	fi
@@ -134,7 +134,7 @@ if [ "${check_password_charset}" == "on" ]; then
 	fi
 	if [ "${passcharcomplexity}" -lt "${password_charset_required}" ]; then
                 test="fail"
-                reason="Password charset complexity is only ${passcharcomplexity}"
+                reason="only ${passcharcomplexity}/${password_charset_required} char types"
         else
             	test="pass"
         fi
@@ -208,6 +208,5 @@ if [ -f "check_auth.txt" ];then
 	rm -f check_auth.txt
 fi
 fn_logecho "Total addresses: ${totalmailaddresses}"
-fn_logecho "Unsecured addresses: ${unsecuredcount}"
-fn_logecho "Unsecured domains: ${unsecureddomainscount}"
+fn_logecho "Unsecured addresses: ${unsecuredcount} from ${unsecureddomainscount} domains"
 fn_duration
