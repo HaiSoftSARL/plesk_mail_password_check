@@ -62,7 +62,7 @@ fn_check_password_length(){
 if [ "${check_length}" == "on" ]; then
 	if [ "${#mailpassword}" -lt "${password_length}" ]; then
 		test="fail"
-		reason="Pass is ${#mailpassword}/${password_length} chars"
+		reason="only ${#mailpassword}/${password_length} chars"
 	else
 		test="pass"
 	fi
