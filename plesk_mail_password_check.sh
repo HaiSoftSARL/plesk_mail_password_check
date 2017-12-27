@@ -169,7 +169,7 @@ if [ "${check_password_charset}" == "on" ]; then
 	if [ "${passcharcomplexity}" -lt "${password_charset_required}" ]; then
                 test="fail"
                 reason="only ${passcharcomplexity}/${password_charset_required} char types"
-		severity=$(( ${password_charset_required}/${passcharcomplexity} ))
+		severity=$(( ${password_charset_required}*2/${passcharcomplexity} ))
         else
             	test="pass"
         fi
