@@ -24,28 +24,58 @@ password_charset_required="2" # How many character types are needed 1-4
 ### Script ###
 ##############
 
+# Check that the script is launched with elevated privileges
+if [ "$(id -u)" != "0" ]; then
+	fn_echo "[ERROR] This script must be run with elevated privileges"
+	exit 1
+fi
+
 # Misc Vars
-selfname="MailPasswords"
+selfname="$(basename "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Download bash API
 if [ ! -f "ultimate-bash-api.sh" ]; then
 	wget https://raw.githubusercontent.com/UltimateByte/ultimate-bash-api/master/ultimate-bash-api.sh
 	chmod +x ultimate-bash-api.sh
 fi
+# shellcheck disable=SC1091
 source ultimate-bash-api.sh
 
-# If Plesk auth view is found, then write all credentials into check_auth.txt
-if [ -f "/usr/local/psa/admin/bin/mail_auth_view" ]; then
-	fn_logecho "Writing password list"
-	/usr/local/psa/admin/bin/mail_auth_view | grep "|" | tail -n +2 > check_auth.txt
-else
-	fn_logecho "[ERROR] Cannot find mail_auth_view from Plesk"
+fn_usage(){
+	fn_echo "Usage: ./${selfname} [command]"
+	fn_echo "Available commands:"
+	fn_echo " * show - Show mailboxes with unsecured passwords"
+	fn_echo " * warn - Send email to mailboxes with unsecured passwords"
+}
+
+# Check user input
+# If nothing has been inputted
+if [ -z "$1" ]; then
+	# Info about script usage
+	fn_usage
+	exit 0
+# If there is too much args
+elif [ -n "$2" ]; then
+	fn_echo "[ERROR] Too many arguments!"
+	# Info about script usage
+	fn_usage
 	exit 1
+else
+	if [ "$1" == "show" ]||[ "$1" == "warn" ]; then
+		command="$1"
+	else
+		fn_echo "[ERROR] Invalid command!"
+		# Info about script usage
+		fn_usage
+		exit 1
+	fi
 fi
 
-# Analyzes result of the last test and takes action
+# Analyzes result of the last test and registers the reason
 fn_last_test_result(){
         if [ "${test}" == "fail" ]; then
+		# Count risk total for the address according to severity
+		risk=$((risk+severity))
 		# Add reason to test result
 		# No reason yet
 		if [ -z "${reasons}" ]; then
@@ -63,6 +93,7 @@ if [ "${check_length}" == "on" ]; then
 	if [ "${#mailpassword}" -lt "${password_length}" ]; then
 		test="fail"
 		reason="only ${#mailpassword}/${password_length} chars"
+		severity=2
 	else
 		test="pass"
 	fi
@@ -77,6 +108,7 @@ if [ "${check_password_selfname}" == "on" ]; then
 	if [ "${mailname}" == "${mailpassword}" ]; then
 		test="fail"
 		reason="mail name"
+		severity=10
 	else
 		test="pass"
 	fi
@@ -90,6 +122,7 @@ if [ "${check_password_domain}" == "on" ]; then
         if [ "${mailpassword}" == "${maildomain}" ]||[ "${mailpassword}" == "${maildomainonly}" ]||[ "${mailpassword}" == "${maildomainext}" ]; then
                 test="fail"
                 reason="domain"
+		severity=10
         else
             	test="pass"
         fi
@@ -105,6 +138,7 @@ if [ "${check_password_simple}" == "on" ]; then
 	if [[ "${easypasswordslist[@]}" =~ "${mailpassword}" ]]; then
 		test="fail"
 		reason="an easy pattern"
+		severity=9
 	else
 		test="pass"
 	fi
@@ -135,6 +169,7 @@ if [ "${check_password_charset}" == "on" ]; then
 	if [ "${passcharcomplexity}" -lt "${password_charset_required}" ]; then
                 test="fail"
                 reason="only ${passcharcomplexity}/${password_charset_required} char types"
+		severity=2
         else
             	test="pass"
         fi
@@ -142,10 +177,23 @@ if [ "${check_password_charset}" == "on" ]; then
 fi
 }
 
+# Create a raw list of all addresses and passwords
+fn_list_passwords(){
+	# If Plesk auth view is found, then write all credentials into check_auth.txt
+	if [ -f "/usr/local/psa/admin/bin/mail_auth_view" ]; then
+		fn_logecho "Writing password list"
+		/usr/local/psa/admin/bin/mail_auth_view | grep "|" | tail -n +2 > check_auth.txt
+	else
+		fn_logecho "[ERROR] Cannot find mail_auth_view from Plesk"
+		exit 1
+	fi
+}
 
 # Run all the checks
-fn_check_password_global(){
+fn_all_checks(){
+	unset test
 	unset reasons
+	risk=0
 	fn_check_password_length
 	fn_check_password_selfname
 	fn_check_password_domain
@@ -153,7 +201,7 @@ fn_check_password_global(){
 	fn_check_password_charset
 	# If password is bad
 	if [ -n "${reasons}" ]; then
-		error+=("[NOT SECURE] | ${mailaddress} | ${mailpassword} | ${reasons}")
+		error+=("[NOT SECURE] | ${mailaddress} | Risk: ${risk} | ${mailpassword} | ${reasons}")
 		unsecuredcount=$((unsecuredcount+1))
 		# List domain as problematic
 		if [[ ! "${unsecureddomains[@]}" =~ "${maildomain}" ]]; then
@@ -164,49 +212,61 @@ fn_check_password_global(){
 }
 
 # Actually check for bad passwords
-if [ -f "check_auth.txt" ]; then
-        echo ""
-        fn_echo "Testing mail addresses..."
-        echo ""
-        totalmailaddresses=0
-	unsecuredcount=0
-	unsecureddomainscount=0
-        # Loop through all mail address
-        while read -r line ; do
-               	totalmailaddresses=$((totalmailaddresses+1))
-               	# Get mail address and password into variables
-               	mailaddress="$(echo "${line}" | awk '{print $2}')"
-               	mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
-		maildomain="$(echo "${mailaddress}" | awk -F "@" '{print $2}')"
-		maildomainonly="$(echo "${maildomain}" | awk -F "." '{print $1}')"
-		mailext="$(echo "${maildomain}" | awk -F "." '{print $2}')"
-		maildomainext="${maildomainonly}${mailext}"
-                echo -en "\e[1A"
-               	echo -e "\r\e[0K ${totalmailaddresses} - ${mailaddress}"
-               	fn_check_password_global
-        done <  <(cat check_auth.txt)
-fi
+fn_run_checks(){
+	if [ -f "check_auth.txt" ]; then
+		echo ""
+		fn_echo "Testing mail addresses..."
+		echo ""
+		totalmailaddresses=0
+		unsecuredcount=0
+		unsecureddomainscount=0
+		# Loop through all mail address
+		while read -r line ; do
+			totalmailaddresses=$((totalmailaddresses+1))
+			# Get mail address and password into variables
+			mailaddress="$(echo "${line}" | awk '{print $2}')"
+			mailpassword="$(echo "${line}" | awk -F "|" '{print $4}' | awk '{print $1}')"
+			maildomain="$(echo "${mailaddress}" | awk -F "@" '{print $2}')"
+			maildomainonly="$(echo "${maildomain}" | awk -F "." '{print $1}')"
+			mailext="$(echo "${maildomain}" | awk -F "." '{print $2}')"
+			maildomainext="${maildomainonly}${mailext}"
+			echo -en "\e[1A"
+			echo -e "\r\e[0K ${totalmailaddresses} - ${mailaddress}"
+			fn_all_checks
+		done <  <(cat check_auth.txt)
+	fi
+	echo ""
+}
 
-echo ""
-
-# Display unsecured mail addresses
-# No bad passwords
-if [ "${#error[@]}" == "0" ]; then
-	fn_logecho "Congrats! All email addresses passwords are secured"
-else
-	fn_logecho "Unsecured email addresses:"
-	for ((index=0; index < ${#error[@]}; index++)); do
-		echo -en "${error[index]}\n"
+fn_display_results(){
+	# Display unsecured mail addresses
+	# No bad passwords
+	if [ "${#error[@]}" == "0" ]; then
+		fn_logecho "Congrats! All email addresses passwords are secured"
+	else
+		fn_logecho "Unsecured email addresses:"
+		for ((index=0; index < ${#error[@]}; index++)); do
+			echo -en "${error[index]}\n"
+		done
+		fn_logecho "Unsecured domains:"
+		for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
+		fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
 	done
-	fn_logecho "Unsecured domains:"
-	for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
-	fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
-done
-fi
+	fi
 
-if [ -f "check_auth.txt" ];then
-	rm -f check_auth.txt
-fi
-fn_logecho "Total addresses: ${totalmailaddresses}"
-fn_logecho "Unsecured addresses: ${unsecuredcount} from ${unsecureddomainscount} domains"
+	if [ -f "check_auth.txt" ];then
+		rm -f check_auth.txt
+	fi
+	fn_logecho "Total addresses: ${totalmailaddresses}"
+	fn_logecho "Unsecured addresses: ${unsecuredcount} from ${unsecureddomainscount} domains"
+}
 fn_duration
+
+if [ "${command}" == "show" ]; then
+	fn_list_passwords
+	fn_run_checks
+	fn_display_results
+elif [ "${command}" == "warn" ];then
+	fn_logecho "Sorry, warn command is not really available yet."
+	exit 0
+fi
