@@ -14,7 +14,7 @@ check_length="on" # Is the password long enough or not
 check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
 check_password_simple="on" # Is the mail password too simple or not
-check_password_charset="off" # Are characters in use too simple or not
+check_password_charset="on" # Are characters in use too simple or not
 
 # Strengh
 password_length="7" # How many characters minimum should the password be
@@ -190,18 +190,19 @@ fi
 echo ""
 
 # Display unsecured mail addresses
+# No bad passwords
 if [ "${#error[@]}" == "0" ]; then
+	fn_logecho "Congrats! All email addresses passwords are secured"
+else
 	fn_logecho "Unsecured email addresses:"
 	for ((index=0; index < ${#error[@]}; index++)); do
 		echo -en "${error[index]}\n"
 	done
-else
-	fn_logecho "Congrats! All email addresses passwords are secured"
-fi
-
-for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
+	fn_logecho "Unsecured domains:"
+	for ((index=0; index < ${#unsecureddomains[@]}; index++)); do
 	fn_logecho "Unsecured domain: ${unsecureddomains[index]}"
 done
+fi
 
 if [ -f "check_auth.txt" ];then
 	rm -f check_auth.txt
