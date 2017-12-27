@@ -93,7 +93,7 @@ if [ "${check_length}" == "on" ]; then
 	if [ "${#mailpassword}" -lt "${password_length}" ]; then
 		test="fail"
 		reason="only ${#mailpassword}/${password_length} chars"
-		severity=2
+		severity="$(( ${password_length}/${#mailpassword} ))"
 	else
 		test="pass"
 	fi
