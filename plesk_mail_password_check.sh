@@ -1,6 +1,6 @@
 #!/bin/bash
 # Name: Mail Password Security
-# Version: 2017-08-09
+# Version: 2017-12-27
 # Description: Check Plesk mailboxes for common security flaws
 # Developer: Robin Labadie
 # Websites: haisoft.fr | lrob.fr | terageek.org
