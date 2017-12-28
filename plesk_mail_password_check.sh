@@ -9,17 +9,17 @@
 ## Settings ##
 ##############
 
+# Sensitivity
+global_risk_threshold="4" # Lower is less tolerant
+
 # Checks
-check_length="on" # Is the password long enough or not
+check_password_length="on" # Is the password long enough or not
+password_length_required="7" # How many characters minimum should the password be
 check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
 check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="on" # Are characters in use too simple or not
-
-# Strengh
-global_risk_threshold="4" # Lower is stronger
-password_length="7" # How many characters minimum should the password be
-password_charset_required="2" # How many character types are needed 1-4
+password_charset_required="2" # How many character types are needed 1-5
 
 # Output options
 displaydomains="off" # Wether to display unsecured domains or not
@@ -77,11 +77,11 @@ fi
 
 # Check for password length according to $password_length
 fn_check_password_length(){
-if [ "${check_length}" == "on" ]; then
-	if [ "${#mailpassword}" -lt "${password_length}" ]; then
+if [ "${check_password_length}" == "on" ]; then
+	if [ "${#mailpassword}" -lt "${password_length_required}" ]; then
 		test="fail"
-		reason="only ${#mailpassword}/${password_length} chars"
-		severity="$(( ${password_length}/${#mailpassword} ))"
+		reason="only ${#mailpassword}/${password_length_required} chars"
+		severity="$(( ${password_length_required}/${#mailpassword} ))"
 	else
 		test="pass"
 	fi
@@ -144,6 +144,10 @@ if [ "${check_password_charset}" == "on" ]; then
 	fi
 	# Check for uppercase chars
         if [[ "${mailpassword}" =~ [A-Z] ]]; then
+		passcharcomplexity=$((passcharcomplexity+1))
+	fi
+	# Check for accentuated chars
+        if [[ "${mailpassword}" =~ [À-Ÿà-ÿ] ]]; then
 		passcharcomplexity=$((passcharcomplexity+1))
 	fi
 	# Check for digit chars
