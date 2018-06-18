@@ -10,16 +10,16 @@
 ##############
 
 # Sensitivity
-global_risk_threshold="4" # Lower is less tolerant
+global_risk_threshold="1" # Lower is less tolerant
 
 # Checks
 check_password_length="on" # Is the password long enough or not
-password_length_required="7" # How many characters minimum should the password be
+password_length_required="8" # How many characters minimum should the password be
 check_password_selfname="on" # Is the mail name the password or not
 check_password_domain="on" # Is the domain name the password or not
 check_password_simple="on" # Is the mail password too simple or not
 check_password_charset="on" # Are characters in use too simple or not
-password_charset_required="2" # How many character types are needed 1-5
+password_charset_required="3" # How many character types are needed 1-5
 
 # Output options
 displaydomains="off" # Wether to display unsecured domains or not
